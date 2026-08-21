@@ -1,5 +1,8 @@
 package com.shadowbase.service;
 
+import com.shadowbase.dto.EnvironmentCreateRequest;
+import com.shadowbase.dto.EnvironmentResponse;
+import com.shadowbase.dto.EnvironmentUpdateRequest;
 import com.shadowbase.entity.Environment;
 import com.shadowbase.entity.EnvironmentStatus;
 import com.shadowbase.repository.EnvironmentRepository;
@@ -16,58 +19,101 @@ public class EnvironmentService {
         this.environmentRepository = environmentRepository;
     }
 
-    public Environment createEnvironment(Environment environment) {
+    public EnvironmentResponse createEnvironment(EnvironmentCreateRequest request) {
 
-        if (environmentRepository.existsByName(environment.getName())) {
+        if (environmentRepository.existsByName(request.getName())) {
             throw new IllegalArgumentException(
-                    "Environment with name '" + environment.getName() + "' already exists"
+                    "Environment with name '" + request.getName() + "' already exists"
             );
         }
 
-        if (environment.getStatus() == null) {
-            environment.setStatus(EnvironmentStatus.ACTIVE);
-        }
+        Environment environment = new Environment();
 
-        return environmentRepository.save(environment);
+        environment.setName(request.getName());
+        environment.setDatabaseName(request.getDatabaseName());
+        environment.setContainerId(request.getContainerId());
+        environment.setStatus(EnvironmentStatus.ACTIVE);
+
+        Environment savedEnvironment = environmentRepository.save(environment);
+
+        return toResponse(savedEnvironment);
     }
 
-    public List<Environment> getAllEnvironments() {
-        return environmentRepository.findAll();
+    public List<EnvironmentResponse> getAllEnvironments() {
+
+        return environmentRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public Environment getEnvironmentById(Long id) {
-        return environmentRepository.findById(id)
+    public EnvironmentResponse getEnvironmentById(Long id) {
+
+        Environment environment = environmentRepository.findById(id)
                 .orElseThrow(() ->
                         new IllegalArgumentException(
                                 "Environment with id " + id + " not found"
                         )
                 );
+
+        return toResponse(environment);
     }
 
-    public Environment updateEnvironment(Long id, Environment updatedEnvironment) {
+    public EnvironmentResponse updateEnvironment(
+            Long id,
+            EnvironmentUpdateRequest request) {
 
-        Environment existingEnvironment = getEnvironmentById(id);
+        Environment existingEnvironment = environmentRepository.findById(id)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Environment with id " + id + " not found"
+                        )
+                );
 
-        if (!existingEnvironment.getName().equals(updatedEnvironment.getName())
-                && environmentRepository.existsByName(updatedEnvironment.getName())) {
+        if (!existingEnvironment.getName().equals(request.getName())
+                && environmentRepository.existsByName(request.getName())) {
+
             throw new IllegalArgumentException(
-                    "Environment with name '" + updatedEnvironment.getName() + "' already exists"
+                    "Environment with name '" + request.getName() + "' already exists"
             );
         }
 
-        existingEnvironment.setName(updatedEnvironment.getName());
-        existingEnvironment.setDatabaseName(updatedEnvironment.getDatabaseName());
-        existingEnvironment.setContainerId(updatedEnvironment.getContainerId());
+        existingEnvironment.setName(request.getName());
+        existingEnvironment.setDatabaseName(request.getDatabaseName());
+        existingEnvironment.setContainerId(request.getContainerId());
 
-        if (updatedEnvironment.getStatus() != null) {
-            existingEnvironment.setStatus(updatedEnvironment.getStatus());
+        if (request.getStatus() != null) {
+            existingEnvironment.setStatus(request.getStatus());
         }
 
-        return environmentRepository.save(existingEnvironment);
+        Environment updatedEnvironment =
+                environmentRepository.save(existingEnvironment);
+
+        return toResponse(updatedEnvironment);
     }
 
     public void deleteEnvironment(Long id) {
-        Environment environment = getEnvironmentById(id);
+
+        Environment environment = environmentRepository.findById(id)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Environment with id " + id + " not found"
+                        )
+                );
+
         environmentRepository.delete(environment);
+    }
+
+    private EnvironmentResponse toResponse(Environment environment) {
+
+        return new EnvironmentResponse(
+                environment.getId(),
+                environment.getName(),
+                environment.getDatabaseName(),
+                environment.getContainerId(),
+                environment.getStatus(),
+                environment.getCreatedAt(),
+                environment.getUpdatedAt()
+        );
     }
 }

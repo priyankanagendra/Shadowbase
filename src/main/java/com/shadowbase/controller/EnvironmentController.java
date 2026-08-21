@@ -1,6 +1,8 @@
 package com.shadowbase.controller;
 
-import com.shadowbase.entity.Environment;
+import com.shadowbase.dto.EnvironmentCreateRequest;
+import com.shadowbase.dto.EnvironmentResponse;
+import com.shadowbase.dto.EnvironmentUpdateRequest;
 import com.shadowbase.service.EnvironmentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -19,31 +21,37 @@ public class EnvironmentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Environment createEnvironment(@RequestBody Environment environment) {
-        return environmentService.createEnvironment(environment);
+    public EnvironmentResponse createEnvironment(
+            @RequestBody EnvironmentCreateRequest request) {
+
+        return environmentService.createEnvironment(request);
     }
 
     @GetMapping
-    public List<Environment> getAllEnvironments() {
+    public List<EnvironmentResponse> getAllEnvironments() {
+
         return environmentService.getAllEnvironments();
     }
 
     @GetMapping("/{id}")
-    public Environment getEnvironmentById(@PathVariable Long id) {
+    public EnvironmentResponse getEnvironmentById(
+            @PathVariable Long id) {
+
         return environmentService.getEnvironmentById(id);
     }
 
     @PutMapping("/{id}")
-    public Environment updateEnvironment(
+    public EnvironmentResponse updateEnvironment(
             @PathVariable Long id,
-            @RequestBody Environment environment) {
+            @RequestBody EnvironmentUpdateRequest request) {
 
-        return environmentService.updateEnvironment(id, environment);
+        return environmentService.updateEnvironment(id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteEnvironment(@PathVariable Long id) {
+
         environmentService.deleteEnvironment(id);
     }
 }
