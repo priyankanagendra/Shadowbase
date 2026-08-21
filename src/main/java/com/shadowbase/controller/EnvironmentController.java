@@ -54,4 +54,18 @@ public class EnvironmentController {
 
         environmentService.deleteEnvironment(id);
     }
+
+    @PostMapping("/{id}/start")
+    public EnvironmentResponse startEnvironment(
+            @PathVariable Long id) {
+
+        return environmentService.startEnvironment(id);
+    }
+
+    @PostMapping("/{id}/stop")
+    public EnvironmentResponse stopEnvironment(
+            @PathVariable Long id) {
+
+        return environmentService.stopEnvironment(id);
+    }
 }

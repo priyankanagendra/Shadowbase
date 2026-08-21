@@ -104,6 +104,52 @@ public class EnvironmentService {
         environmentRepository.delete(environment);
     }
 
+    public EnvironmentResponse startEnvironment(Long id) {
+
+        Environment environment = getEnvironmentEntityById(id);
+
+        if (environment.getStatus() == EnvironmentStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "Environment with id " + id + " is already ACTIVE"
+            );
+        }
+
+        environment.setStatus(EnvironmentStatus.ACTIVE);
+
+        Environment updatedEnvironment =
+                environmentRepository.save(environment);
+
+        return toResponse(updatedEnvironment);
+    }
+
+    public EnvironmentResponse stopEnvironment(Long id) {
+
+        Environment environment = getEnvironmentEntityById(id);
+
+        if (environment.getStatus() == EnvironmentStatus.STOPPED) {
+            throw new IllegalStateException(
+                    "Environment with id " + id + " is already STOPPED"
+            );
+        }
+
+        environment.setStatus(EnvironmentStatus.STOPPED);
+
+        Environment updatedEnvironment =
+                environmentRepository.save(environment);
+
+        return toResponse(updatedEnvironment);
+    }
+
+    private Environment getEnvironmentEntityById(Long id) {
+
+        return environmentRepository.findById(id)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Environment with id " + id + " not found"
+                        )
+                );
+    }
+
     private EnvironmentResponse toResponse(Environment environment) {
 
         return new EnvironmentResponse(
