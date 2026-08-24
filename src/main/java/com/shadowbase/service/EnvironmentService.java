@@ -1,5 +1,6 @@
 package com.shadowbase.service;
 
+import com.shadowbase.docker.DockerService;
 import com.shadowbase.dto.EnvironmentCreateRequest;
 import com.shadowbase.dto.EnvironmentResponse;
 import com.shadowbase.dto.EnvironmentUpdateRequest;
@@ -14,9 +15,14 @@ import java.util.List;
 public class EnvironmentService {
 
     private final EnvironmentRepository environmentRepository;
+    private final DockerService dockerService;
 
-    public EnvironmentService(EnvironmentRepository environmentRepository) {
+    public EnvironmentService(
+            EnvironmentRepository environmentRepository,
+            DockerService dockerService) {
+
         this.environmentRepository = environmentRepository;
+        this.dockerService = dockerService;
     }
 
     public EnvironmentResponse createEnvironment(EnvironmentCreateRequest request) {
@@ -34,7 +40,8 @@ public class EnvironmentService {
         environment.setContainerId(request.getContainerId());
         environment.setStatus(EnvironmentStatus.ACTIVE);
 
-        Environment savedEnvironment = environmentRepository.save(environment);
+        Environment savedEnvironment =
+                environmentRepository.save(environment);
 
         return toResponse(savedEnvironment);
     }
@@ -49,12 +56,7 @@ public class EnvironmentService {
 
     public EnvironmentResponse getEnvironmentById(Long id) {
 
-        Environment environment = environmentRepository.findById(id)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Environment with id " + id + " not found"
-                        )
-                );
+        Environment environment = getEnvironmentEntityById(id);
 
         return toResponse(environment);
     }
@@ -63,18 +65,15 @@ public class EnvironmentService {
             Long id,
             EnvironmentUpdateRequest request) {
 
-        Environment existingEnvironment = environmentRepository.findById(id)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Environment with id " + id + " not found"
-                        )
-                );
+        Environment existingEnvironment =
+                getEnvironmentEntityById(id);
 
         if (!existingEnvironment.getName().equals(request.getName())
                 && environmentRepository.existsByName(request.getName())) {
 
             throw new IllegalArgumentException(
-                    "Environment with name '" + request.getName() + "' already exists"
+                    "Environment with name '" + request.getName()
+                            + "' already exists"
             );
         }
 
@@ -94,25 +93,33 @@ public class EnvironmentService {
 
     public void deleteEnvironment(Long id) {
 
-        Environment environment = environmentRepository.findById(id)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Environment with id " + id + " not found"
-                        )
-                );
+        Environment environment =
+                getEnvironmentEntityById(id);
 
         environmentRepository.delete(environment);
     }
 
     public EnvironmentResponse startEnvironment(Long id) {
 
-        Environment environment = getEnvironmentEntityById(id);
+        Environment environment =
+                getEnvironmentEntityById(id);
 
         if (environment.getStatus() == EnvironmentStatus.ACTIVE) {
             throw new IllegalStateException(
                     "Environment with id " + id + " is already ACTIVE"
             );
         }
+
+        String containerId = environment.getContainerId();
+
+        if (containerId == null || containerId.isBlank()) {
+            throw new IllegalStateException(
+                    "Environment with id " + id
+                            + " does not have a containerId"
+            );
+        }
+
+        dockerService.startContainer(containerId);
 
         environment.setStatus(EnvironmentStatus.ACTIVE);
 
@@ -124,13 +131,25 @@ public class EnvironmentService {
 
     public EnvironmentResponse stopEnvironment(Long id) {
 
-        Environment environment = getEnvironmentEntityById(id);
+        Environment environment =
+                getEnvironmentEntityById(id);
 
         if (environment.getStatus() == EnvironmentStatus.STOPPED) {
             throw new IllegalStateException(
                     "Environment with id " + id + " is already STOPPED"
             );
         }
+
+        String containerId = environment.getContainerId();
+
+        if (containerId == null || containerId.isBlank()) {
+            throw new IllegalStateException(
+                    "Environment with id " + id
+                            + " does not have a containerId"
+            );
+        }
+
+        dockerService.stopContainer(containerId);
 
         environment.setStatus(EnvironmentStatus.STOPPED);
 
@@ -150,7 +169,8 @@ public class EnvironmentService {
                 );
     }
 
-    private EnvironmentResponse toResponse(Environment environment) {
+    private EnvironmentResponse toResponse(
+            Environment environment) {
 
         return new EnvironmentResponse(
                 environment.getId(),
